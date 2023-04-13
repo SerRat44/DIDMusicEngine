@@ -100,31 +100,33 @@ function seedRNG(seed) {
 //end helper/seed functions
 
 const scales = {
-    //major: [0, 2, 3, 5, 7, 8, 10],
-    //minor: [0, 2, 4, 5, 7, 9, 11],
-    major: [0, 2, 3, 5, 6, 8, 9, 11], //diminished
-	minor: [0, 1, 4, 5, 7, 8, 10],  //phrygianDominant
-	//harmonicMinor: [0, 2, 3, 5, 7, 8, 11],
-    //phrygianDominant: [0, 1, 4, 5, 7, 8, 10],
-    //locrian: [0, 1, 3, 5, 6, 8, 10],
-    //diminished: [0, 2, 3, 5, 6, 8, 9, 11],
+	harmonicMinor: [0, 2, 3, 5, 7, 8, 11],
+    phrygianDominant: [0, 1, 4, 5, 7, 8, 10],
+    locrian: [0, 1, 3, 5, 6, 8, 10],
+    diminished: [0, 2, 3, 5, 6, 8, 9, 11]
 };
 
 const chordTypes = {
     triad: [0, 2, 4],
 };
 
+function chooseRandomScale(currentScale) {
+    const scaleNames = Object.keys(scales);
+    if (currentScale === null) {
+        return scales[choose(scaleNames)];
+    }
+    let newScaleName;
+    do {
+        newScaleName = choose(scaleNames);
+    } while (scales[newScaleName] === currentScale);
+    return scales[newScaleName];
+}
+
 function modulate(key, scale) {
     choose([
         function() {
-            // Move to relative major or minor
-            if (scale === scales.minor) {
-                scale = scales.major;
-                key = (key + 3) % 12;
-            } else if (scale === scales.major) {
-                scale = scales.minor;
-                key = (key + 9) % 12;
-            }
+            // Move to a random scale that isn't the current one
+            scale = chooseRandomScale(scale);
         },
         function() {
             // Move around the cycle of fifths
@@ -146,26 +148,15 @@ function flip(trueChance = 0.5) {
 
 function getChord(context, rowIndex) {
     const { progression, key, scale } = context;
+    if (!scale) {
+        console.error('Scale is not properly defined in the context object');
+        return;
+    }
     const progIndex = Math.floor(rowIndex / 4);
     const chordNumber = progression[progIndex];
     return chordTypes.triad.map(noteIndex => key + scale[(chordNumber - 1 + noteIndex) % scale.length]);
 }
 
-function arp(context) {
-    const octave = choose([0, 12, 24]);
-    const offset = choose([0, 1, 2]);
-    const pwOffset = rndInt(8) * 2;
-    const pwCycle = choose([4, 5, 6, 8, 12, 16]);
-    return fill(PatternSize, i => {
-        const chord = getChord(context, i);
-        return {
-            note: chord[(i + offset + choose([0, 0, 0, 1, 2])) % chord.length] + octave + choose([0, 12]),
-            fx: {
-                pulseWidth: ((pwOffset + i) % pwCycle) / (pwCycle + 1),
-            },
-        };
-    });
-}
 
 function bass(context) {
     return fill(PatternSize, i => {
@@ -186,46 +177,6 @@ function bass2(context) {
     });
 }
 
-function melody1(context) {
-    const slow = flip();
-    const pwmMod = flip();
-    let pwmAmount = rnd() * 0.5;
-
-    const pattern = [];
-    let current = (choose(chordTypes.triad) - 1) + context.scale.length * choose([2, 3, 4]);
-    for (let i = 0; i < PatternSize; i++) {
-        pwmAmount += flip() ? 0.05 : -0.05;
-        pwmAmount += pwmAmount > 0.7 ? -0.05 : pwmAmount < 0.1 ? 0.05 : 0;
-
-        if (slow && i % 2 === 1 || flip(0.1 + 0.4 * (1 - i % 2))) {
-            pattern.push({ note: "cont", fx: { pulseWidth: pwmMod ? pwmAmount : 0 } });
-        } else {
-            if (current > 10 && flip()) {
-                current--;
-            } else if (current < 32 && flip()) {
-                current++;
-            } else if (current > 15 && flip(0.2)) {
-                current -= choose([2, 4, 7]);
-            } else if (current < 25 && flip(0.2)) {
-                current += choose([2, 4, 7]);
-            }
-            const chord = getChord(context, i);
-
-            if (flip() && !chord.includes(current % context.scale.length)) {
-                current += flip() ? -1 : 1;
-            }
-
-            pattern.push({
-                note: context.key + context.scale[current % context.scale.length] + Math.floor(current / context.scale.length) * 12,
-                fx: {
-                    glide: flip(0.2) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
-                    pulseWidth: pwmMod ? pwmAmount : 0
-                }
-            });
-        }
-    }
-    return pattern;
-}
 
 function powerChord(rootNote) {
     return [rootNote, rootNote + 7];
@@ -240,8 +191,10 @@ function riff(context) {
         const powerChordNotes = powerChord(rootNote);
         const usePowerChord = flip(0.7);
         const palmMute = flip(0.5) ? 0.5 : 1; // 50% chance of palm-muted notes
+        const chromaticRun = flip(0.2); // 20% chance of a chromatic run
+        const chromaticOffset = chromaticRun ? rndInt(4) - 2 : 0;
         pattern.push({
-            note: usePowerChord ? choose(powerChordNotes) : rootNote,
+            note: usePowerChord ? choose(powerChordNotes) + chromaticOffset : rootNote + chromaticOffset,
             vel: palmMute,
             fx: {
                 glide: flip(0.2) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
@@ -251,7 +204,53 @@ function riff(context) {
     return pattern;
 }
 
+function aggressiveRiff(context) {
+    const octave = choose([0, 12, 24]);
+    const pattern = [];
+    for (let i = 0; i < PatternSize; i++) {
+        const chord = getChord(context, i);
+        const rootNote = chord[0] + octave;
+        const powerChordNotes = powerChord(rootNote);
+        const usePowerChord = flip(0.9); // Increase the chance of power chords
+        const palmMute = flip(0.5) ? 0.5 : 1;
+        const chromaticRun = flip(0.3); // Slightly increase the chance of a chromatic run
+        const chromaticOffset = chromaticRun ? rndInt(4) - 2 : 0;
+        pattern.push({
+            note: usePowerChord ? choose(powerChordNotes) + chromaticOffset : rootNote + chromaticOffset,
+            vel: palmMute,
+            fx: {
+                glide: flip(0.2) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
+            },
+        });
+    }
+    return pattern;
+}
 
+function epicMetalSolo(context) {
+    const octave = choose([0, 12, 24]);
+    const pattern = [];
+    for (let i = 0; i < PatternSize; i++) {
+        const chord = getChord(context, i);
+        const rootNote = chord[0] + octave;
+        const powerChordNotes = powerChord(rootNote);
+        const usePowerChord = flip(0.9); // Increase the chance of power chords
+        const palmMute = flip(0.5) ? 0.5 : 1;
+        const chromaticRun = flip(0.5); // Significantly increase the chance of a chromatic run
+        const chromaticOffset = chromaticRun ? rndInt(4) - 2 : 0;
+        const fastNotes = flip(0.8); // 80% chance of playing fast notes
+        const noteLength = fastNotes ? 1 : 2;
+
+        pattern.push({
+            note: usePowerChord ? choose(powerChordNotes) + chromaticOffset : rootNote + chromaticOffset,
+            vel: palmMute,
+            len: noteLength,
+            fx: {
+                glide: flip(0.3) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
+            },
+        });
+    }
+    return pattern;
+}
 
 function emptyNote() {
     return fill(PatternSize, _ => ({ note: '---' }));
@@ -261,27 +260,28 @@ function emptyDrum() {
     return fill(PatternSize, _ => ({ drum: '---' }));
 }
 
-function drum() {
-    return fill(PatternSize, i => ({
-        drum: i % 8 === 0 ? 'KCK' :
-            i % 8 === 4 ? 'SNR' :
-                (i % 2 === 0 && flip(0.2)) ? 'KCK' :
-                    flip(0.05) ? choose(['KCK', 'SNR']) : 'NSS',
-        vel: 0.6 + 0.2 * (1 - (i % 2))
-    }));
-}
 
 function metalDrum() {
     return fill(PatternSize, i => ({
         drum: i % 8 === 0 ? 'KCK' :
             i % 8 === 4 ? 'SNR' :
-                (i % 2 === 0 && flip(0.6)) ? 'KCK' :
-                    flip(0.2) ? choose(['KCK', 'SNR']) : 'NSS',
+                (i % 2 === 0 && flip(0.8)) ? 'KCK' : // Increase the chance of kick drum hits
+                    flip(0.3) ? choose(['KCK', 'SNR']) : 'NSS', // Increase the chance of snare drum hits
         vel: 0.6 + 0.2 * (1 - (i % 2)),
         doubleBass: i % 4 === 2 ? 'KCK' : '---', // Add double bass drum hits
     }));
 }
 
+function aggressiveMetalDrum() {
+    return fill(PatternSize, i => ({
+        drum: i % 8 === 0 ? 'KCK' :
+            i % 8 === 4 ? 'SNR' :
+                (i % 2 === 0 && flip(0.8)) ? 'KCK' :
+                    flip(0.3) ? choose(['KCK', 'SNR']) : 'NSS',
+        vel: 0.6 + 0.2 * (1 - (i % 2)),
+        doubleBass: i % 2 === 0 ? 'KCK' : '---', // Add more aggressive double bass drum hits
+    }));
+}
 
 
 
@@ -289,15 +289,15 @@ const progressions = [
     [1, 1, 6, 6, 4, 4, 5, 5, 3, 3, 4, 4, 5, 5, 6, 6],
     [1, 1, 6, 6, 4, 4, 5, 5, 1, 1, 6, 6, 3, 3, 5, 5],
     [4, 4, 5, 5, 1, 1, 1, 1, 5, 5, 6, 6, 1, 1, 1, 1],
+	[1, 1, 6, 6, 2, 2, 5, 5, 1, 1, 6, 6, 2, 2, 5, 5],
+    [5, 5, 1, 1, 6, 6, 4, 4, 5, 5, 1, 1, 6, 6, 4, 4],
     [1, 1, 4, 4, 5, 5, 1, 1, 6, 6, 4, 4, 5, 5, 1, 1],
     [5, 5, 4, 4, 1, 1, 1, 1, 5, 5, 6, 6, 1, 1, 1, 1],
     [6, 6, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 5, 5, 5, 5],
     [1, 1, 1, 1, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5],
     [6, 6, 6, 6, 4, 4, 4, 4, 1, 1, 1, 1, 1, 1, 5, 5],
-	[1, 1, 5, 5, 6, 6, 2, 2, 1, 1, 5, 5, 6, 6, 3, 3],
-	[6, 6, 1, 1, 4, 4, 3, 3, 6, 6, 1, 1, 5, 5, 2, 2],
-	[1, 1, 6, 6, 2, 2, 5, 5, 1, 1, 6, 6, 4, 4, 3, 3],
-	[5, 5, 1, 1, 6, 6, 4, 4, 5, 5, 1, 1, 3, 3, 2, 2]
+	[1, 1, 4, 4, 6, 6, 5, 5, 1, 1, 4, 4, 6, 6, 5, 5],
+    [1, 1, 6, 6, 4, 4, 5, 5, 1, 1, 6, 6, 4, 4, 5, 5],
 ];
 
 
@@ -319,7 +319,7 @@ function bpmClock() {
 function mutateState(state) {
     state.songIndex++;
     if (state.songIndex % 8 === 0) {
-        state.bpm = Math.floor(Math.random() * 40) + 140;
+        state.bpm = rndInt(50) + 110;
         //clock.set(state.bpm, frame);
     }
     if (state.songIndex % 4 === 0) {
@@ -328,9 +328,9 @@ function mutateState(state) {
     if (state.songIndex % 2 === 0) {
         state.progression = choose(progressions);
     }
-    state.seedCode = hex(Math.floor(Math.random() * 255)) + hex(Math.floor(Math.random() * 255)) + hex(Math.floor(Math.random() * 255)) + hex(Math.floor(Math.random() * 255));
+    state.seedCode = hex(rndInt(255)) + hex(rndInt(255)) + hex(rndInt(255)) + hex(rndInt(255));
     seedRNG(state.seedCode);
-
+	
     //display.setPatterns(patterns, stateString);
 }
 
@@ -358,46 +358,36 @@ function genTrack() {
     function newPatterns() {
         seedRNG(state.seedCode);
         patterns = [
-            //choose([bass, bass2, emptyNote])(state),
-           // Math.random() < 0.7 ? arp(state) : emptyNote(),
-           // Math.random() < 0.7 ? melody1(state) : emptyNote(),
-           // choose([emptyNote, arp, melody1])(state),
-			//Math.random() < 0.8 ? drum() : emptyDrum(),
-			
-			
 			choose([bass, bass2, emptyNote])(state),
-			Math.random() < 0.7 ? riff(state) : emptyNote(),
-			Math.random() < 0.7 ? riff(state) : emptyNote(),
+			rnd() < 0.7 ? (choose([riff, aggressiveRiff]))(state) : emptyNote(),
+			rnd() < 0.7 ? (choose([riff, aggressiveRiff]))(state) : epicMetalSolo(state),
 			choose([emptyNote, riff])(state),
-			Math.random() < 0.8 ? metalDrum() : emptyDrum(),
+			rnd() < 0.8 ? (choose([metalDrum, aggressiveMetalDrum]))(state) : emptyNote(),
 			
-
         ];
     }
 
     // create initial patterns
-   
    newPatterns();
     //display.setPatterns(patterns, save(state));
-	
-
 	console.log(patterns);
-		console.log(state);
-		console.log(seedOrSave);
-		console.log(save(state));
-
+	console.log(state);
+	console.log(save(state));
 
     function frame(f) {
         const positionInPattern = f % PatternSize;
         if (f % 128 === 0 && f !== 0) {
             mutateState(state);
             newPatterns();
+			
+			console.log(patterns);
+			console.log(state);
+			console.log(save(state));
+			
             clock.set(state.bpm, frame);
             //display.setPatterns(patterns, save(state));
         }
-
         //display.highlightRow(positionInPattern);
-
         // Not a loop because these tuple parts have different types depending on melody vs drum
        synths[0].play(patterns[0][positionInPattern]);
         synths[1].play(patterns[1][positionInPattern]);
@@ -405,11 +395,8 @@ function genTrack() {
         synths[3].play(patterns[3][positionInPattern]);
         synths[4].play(patterns[4][positionInPattern]);
     }
-
     clock.set(state.bpm, frame);
-	
 }
-
 
 
 
@@ -423,7 +410,13 @@ function unhex(v) {
 }
 
 function save(state) {
-    const nonRandomElements = [state.key, state.scale === scales.major ? 0 : 1, progressions.indexOf(state.progression), state.bpm, state.songIndex % 256];
+    const nonRandomElements = [
+        state.key,
+        Object.keys(scales).indexOf(Object.keys(scales).find(key => scales[key] === state.scale)),
+        progressions.indexOf(state.progression),
+        state.bpm,
+        state.songIndex % 256
+    ];
     const saveCode = "0x" + nonRandomElements.map(hex).join("") + state.seedCode;
     return saveCode;
 }
@@ -431,7 +424,7 @@ function save(state) {
 function restore(code) {
     const codeString = code.slice(2);
     const key = unhex(codeString.slice(0, 2));
-    const scale = unhex(codeString.slice(2, 4)) === 0 ? scales.major : scales.minor;
+    const scale = scales[Object.keys(scales)[unhex(codeString.slice(2, 4))]];
     const progression = progressions[unhex(codeString.slice(4, 6))];
     const bpm = unhex(codeString.slice(6, 8));
     const songIndex = unhex(codeString.slice(8, 10));
@@ -450,13 +443,14 @@ function createInitialState(seedOrSave) {
     if (seedOrSave.startsWith("0x")) {
         return restore(seedOrSave);
     } else {
-        const seed = (seedOrSave && seedOrSave.length > 0) ? seedOrSave : "" + Math.random();
+        const seed = (seedOrSave && seedOrSave.length > 0) ? seedOrSave : "" + rnd();
         seedRNG(seed);
+        
         return {
             key: rndInt(12),
-            scale: scales.minor,
-            progression: progressions[0],
-            bpm: 152,
+            scale: scales.phrygianDominant, // Use chooseRandomScale here
+            progression: progressions[rndInt(12)],
+            bpm: rndInt(50) + 110,
             seedCode: createSeedCode(),
             songIndex: 0
         };
@@ -464,7 +458,7 @@ function createInitialState(seedOrSave) {
 }
 
 function createSeedCode() {
-    return hex(Math.floor(Math.random() * 255)) + hex(Math.floor(Math.random() * 255)) + hex(Math.floor(Math.random() * 255)) + hex(Math.floor(Math.random() * 255));
+    return hex(rndInt(255)) + hex(rndInt(255)) + hex(rndInt(255)) + hex(rndInt(255));
 }
 // save/load
 
