@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>newAudioEngine</title>
+<title>dIDMusicEngine</title>
 <style>
 body {
   font-family: monospace;
@@ -31,36 +31,18 @@ button {
 </head>
 
 <body>
-<div id="titleScreen">
-  <h1>New Audio Engine</h1>
-  <button id="startBtn">Start</button>
-</div>
-
-<div id="contentWrapper" style="display: none;">
+<div id="contentWrapper" style="display: block;">
+	<h1>DID Music Engine</h1>
   <input id="seedInput" type="text" placeholder="Enter custom seed">
   <button id="generateBtn">Generate Song</button>
-  <button id="nextPatternBtn">Next Pattern</button>
+  <button id="resetBtn">Reset</button>
   <div id="patternId"></div>
   <div id="songDisplay"></div>
 </div>
 
 <script>
 
-// helper/seed functions
-
-
-function choose(array) {
-    return array[Math.floor(rnd() * array.length)];
-}
-
-function rndInt(max) {
-    return Math.floor(rnd() * max);
-}
-
-function fill(count, fn) {
-    return new Array(count).fill(undefined).map((x, i) => fn(i));
-}
-
+// seed functions
 function sfc32(a, b, c, d) {
     return function() {
         a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
@@ -89,15 +71,33 @@ function xmur3(str) {
 
 let randomFunction = Math.random;
 
-function rnd() {
-    return randomFunction();
-}
-
+// important seed helper functions
 function seedRNG(seed) {
     const seedHasher = xmur3(seed);
     randomFunction = sfc32(seedHasher(), seedHasher(), seedHasher(), seedHasher());
 }
-//end helper/seed functions
+
+function choose(array) {
+    return array[Math.floor(rnd() * array.length)];
+}
+
+function rndInt(max) {
+    return Math.floor(rnd() * max);
+}
+
+function fill(count, fn) {
+    return new Array(count).fill(undefined).map((x, i) => fn(i));
+}
+
+function flip(trueChance = 0.5) {
+    return rnd() < trueChance;
+}
+
+function rnd() {
+    return randomFunction();
+}
+//end of important seed helper functions
+//end seed functions
 
 const scales = {
 	harmonicMinor: [0, 2, 3, 5, 7, 8, 11],
@@ -142,16 +142,10 @@ function modulate(key, scale) {
 
 const PatternSize = 64;
 
-function flip(trueChance = 0.5) {
-    return rnd() < trueChance;
-}
+
 
 function getChord(context, rowIndex) {
     const { progression, key, scale } = context;
-    if (!scale) {
-        console.error('Scale is not properly defined in the context object');
-        return;
-    }
     const progIndex = Math.floor(rowIndex / 4);
     const chordNumber = progression[progIndex];
     return chordTypes.triad.map(noteIndex => key + scale[(chordNumber - 1 + noteIndex) % scale.length]);
@@ -320,7 +314,6 @@ function mutateState(state) {
     state.songIndex++;
     if (state.songIndex % 8 === 0) {
         state.bpm = rndInt(50) + 110;
-        //clock.set(state.bpm, frame);
     }
     if (state.songIndex % 4 === 0) {
         [state.key, state.scale] = modulate(state.key, state.scale);
@@ -331,7 +324,6 @@ function mutateState(state) {
     state.seedCode = hex(rndInt(255)) + hex(rndInt(255)) + hex(rndInt(255)) + hex(rndInt(255));
     seedRNG(state.seedCode);
 	
-    //display.setPatterns(patterns, stateString);
 }
 
 function genTrack() {
@@ -340,10 +332,8 @@ function genTrack() {
 	
     let patterns = [[], [], [], [], []];
 
-    //const display = PatternDisplay(document.getElementById("display"));
     const clock = bpmClock();
 
-    // @ts-ignore
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const au = Audio(ctx);
 	
@@ -367,9 +357,7 @@ function genTrack() {
         ];
     }
 
-    // create initial patterns
    newPatterns();
-    //display.setPatterns(patterns, save(state));
 	console.log(patterns);
 	console.log(state);
 	console.log(save(state));
@@ -385,10 +373,8 @@ function genTrack() {
 			console.log(save(state));
 			
             clock.set(state.bpm, frame);
-            //display.setPatterns(patterns, save(state));
         }
-        //display.highlightRow(positionInPattern);
-        // Not a loop because these tuple parts have different types depending on melody vs drum
+
        synths[0].play(patterns[0][positionInPattern]);
         synths[1].play(patterns[1][positionInPattern]);
         synths[2].play(patterns[2][positionInPattern]);
@@ -400,7 +386,7 @@ function genTrack() {
 
 
 
-// save/load
+// start of save/load
 function hex(v) {
     return Math.floor(v).toString(16).toUpperCase().padStart(2, '0');
 }
@@ -460,9 +446,9 @@ function createInitialState(seedOrSave) {
 function createSeedCode() {
     return hex(rndInt(255)) + hex(rndInt(255)) + hex(rndInt(255)) + hex(rndInt(255));
 }
-// save/load
+// end of save/load
 
-
+//beginning of audio
 const A3Frequency = 440;
 const A0Frequency = A3Frequency / 8;
 
@@ -606,24 +592,9 @@ return {
     DrumSynth
 }
 }
-	
-
-
-
-
-// end of save/load
-
-function start() {
- // initAC();
-
-  document.getElementById("titleScreen").style.display = "none";
-  document.getElementById("contentWrapper").style.display = "block";
-
-
-}
+//end of audio
 
 document.addEventListener("DOMContentLoaded", () => {
-document.getElementById("startBtn").addEventListener("click", start);
 document.getElementById("generateBtn").addEventListener("click", () => {
         genTrack();
     });
