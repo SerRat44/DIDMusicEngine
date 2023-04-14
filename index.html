@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dIDMusicEngine</title>
+<title>DIDMusicEngine</title>
 <style>
 body {
   font-family: monospace;
@@ -17,27 +17,38 @@ body {
 button {
     margin-bottom: 1rem;
 }
-.song-section {
+#trackDisplay {
   display: flex;
   justify-content: space-evenly;
+  margin: 4px;
+}
+#trackCode {
+  margin: 4px;
   margin-bottom: 1rem;
 }
 .song-column {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin: 4px;
+}
+.highlight {
+  background-color: #ffcc00;
 }
 </style>
 </head>
 
 <body>
-<div id="contentWrapper" style="display: block;">
+
+<div id="contentWrapper">
 	<h1>DID Music Engine</h1>
-  <input id="seedInput" type="text" placeholder="Enter custom seed">
-  <button id="generateBtn">Generate Song</button>
-  <button id="resetBtn">Reset</button>
-  <div id="patternId"></div>
-  <div id="songDisplay"></div>
+	<div id="contentWrapper">
+		<input id="seedInput" type="text" placeholder="optional seed or trackcode">
+		<button id="generateBtn">Generate Track</button>
+		<button id="resetBtn" disabled>Reset</button>
+	</div>
+	<div id="trackCode"></div>
+	<div id="trackDisplay"></div>
 </div>
 
 <script>
@@ -510,8 +521,12 @@ function bpmClock() {
         window.clearInterval(intervalHandle.bpmClock);
         intervalHandle.bpmClock = window.setInterval(() => frameFunction(fN++), (60000 / bpm) / 4);
     }
+    function stop() {
+        window.clearInterval(intervalHandle.bpmClock);
+    }
     return {
-        set
+        set,
+        stop
     }
 }
 
@@ -538,6 +553,7 @@ function genTrack() {
     let patterns = [[], [], [], [], []];
 
     const clock = bpmClock();
+	const displayObj = display();
 
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const au = Audio(ctx);
@@ -549,7 +565,7 @@ function genTrack() {
     au.SquareSynth(0.5),
     au.DrumSynth()
 ];
-   
+	
     function newPatterns() {
         seedRNG(state.seedCode);
         patterns = [
@@ -560,37 +576,42 @@ function genTrack() {
             rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(),
         ];
     }
-
-   newPatterns();
 	console.log(patterns);
 	console.log(state);
 	console.log(save(state));
-	document.getElementById("generateBtn").disabled = true;
-
+	
     function frame(f) {
         const positionInPattern = f % PatternSize;
         if (f % 128 === 0 && f !== 0) {
-
             mutateState(state);
             newPatterns();
+            clock.set(state.bpm, frame);
+			displayObj.track(patterns, save(state));
 			
 			console.log(patterns);
 			console.log(state);
 			console.log(save(state));
-			
-            clock.set(state.bpm, frame);
         }
-
-       synths[0].play(patterns[0][positionInPattern]);
+		synths[0].play(patterns[0][positionInPattern]);
         synths[1].play(patterns[1][positionInPattern]);
         synths[2].play(patterns[2][positionInPattern]);
         synths[3].play(patterns[3][positionInPattern]);
         synths[4].play(patterns[4][positionInPattern]);
+		
+		displayObj.highlight(patterns, f);
     }
+	newPatterns();
     clock.set(state.bpm, frame);
-
+	displayObj.track(patterns, save(state));
 	
-
+	document.getElementById("resetBtn").disabled = false;
+	document.getElementById("generateBtn").disabled = true;
+	document.getElementById("resetBtn").addEventListener("click", () => {
+		synths.forEach(synth => synth.stop());
+		clock.stop();
+		document.getElementById("resetBtn").disabled = true;
+		document.getElementById("generateBtn").disabled = false;
+	});
 }
 
 
@@ -739,8 +760,11 @@ function Audio(ctx) {
             }
             set(width, note.fx ? (note.fx.pulseWidth || 0.0) : 0.0);
         }
-
-        return { play }
+		function stop() {
+			noteOff();
+			outputPanner.disconnect();
+		}
+		return { play, stop }
     }
 	
 	function DrumSynth() {
@@ -793,9 +817,18 @@ function Audio(ctx) {
             noiseGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.15 * vel, 0.0]), ctx.currentTime, 0.15);
         }
     }
-    return {
-        play,
-    }
+    function stop() {
+		toneGain.gain.cancelScheduledValues(ctx.currentTime);
+		toneGain.gain.setValueAtTime(0, ctx.currentTime);
+		toneGain.disconnect();
+		noiseGain.gain.cancelScheduledValues(ctx.currentTime);
+		noiseGain.gain.setValueAtTime(0, ctx.currentTime);
+		noiseGain.disconnect();
+	}
+	return {
+		play,
+		stop
+	}
 }
 
 return {
@@ -805,16 +838,86 @@ return {
 }
 //end of audio
 
+//display functions
+function display () {
 
+	function getNoteName(noteValue) {
+		const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+		const octave = Math.floor(noteValue / 12);
+		return noteNames[noteValue % 12] + octave;
+	}
 
+	function track(patterns, trackCode) {
+    const songDisplay = document.getElementById("trackDisplay");
+    const trackCodeElement = document.getElementById("trackCode");
+    const columns = [];
+
+    // Clear existing content and set track code
+    songDisplay.innerHTML = '';
+    trackCodeElement.textContent = `Track Code: ${trackCode}`;
+
+    // Create columns for each pattern
+    for (let i = 0; i < patterns.length; i++) {
+        const songColumn = document.createElement("div");
+        songColumn.classList.add("song-column");
+
+        for (let j = 0; j < patterns[i].length; j++) {
+            const noteElement = document.createElement("div");
+            noteElement.classList.add("note");
+
+            if (patterns[i][j]) {
+				if (patterns[i][j].note === '---') {
+					noteElement.textContent = '-';
+				} else if (patterns[i][j].note === 'cont') { // Add this case for continuous notes
+					noteElement.textContent = '•';
+				} else if (patterns[i][j].note !== undefined) {
+					noteElement.textContent = getNoteName(patterns[i][j].note);
+				} else if (patterns[i][j].drum) {
+					noteElement.textContent = patterns[i][j].drum;
+				}
+			} else {
+				noteElement.textContent = '-';
+		}
+            songColumn.appendChild(noteElement);
+        }
+
+        songDisplay.appendChild(songColumn);
+        columns.push(songColumn);
+    }
+
+    return columns;
+}
+
+function highlight(patterns, frame) {
+    const positionInPattern = frame % PatternSize;
+
+    // Remove existing highlight class
+    for (let i = 0; i < patterns.length; i++) {
+        const column = document.getElementsByClassName('song-column')[i];
+        const currentHighlight = column.querySelector('.highlight');
+        if (currentHighlight) currentHighlight.classList.remove('highlight');
+    }
+
+    // Add highlight class to the current row
+    for (let i = 0; i < patterns.length; i++) {
+        const column = document.getElementsByClassName('song-column')[i];
+        const row = column.children[positionInPattern];
+        row.classList.add('highlight');
+    }
+}
+return {
+	track,
+	highlight
+}
+	
+}
+//end of display functions
 
 document.addEventListener("DOMContentLoaded", () => {
 document.getElementById("generateBtn").addEventListener("click", () => {
 	genTrack();
 });
-document.getElementById("resetBtn").addEventListener("click", () => {
 
-	});
  
 });
 </script>
