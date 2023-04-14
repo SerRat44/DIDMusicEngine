@@ -257,14 +257,24 @@ function epicMetalSolo(context) {
         const chromaticOffset = chromaticRun ? rndInt(4) - 2 : 0;
         const fastNotes = flip(0.8); // 80% chance of playing fast notes
         const noteLength = fastNotes ? 1 : 2;
+        const pinchHarmonic = flip(0.2); // 20% chance of a pinch harmonic
+        const tapping = flip(0.15); // 15% chance of tapping
+        const sweepPicking = flip(0.1); // 10% chance of sweep picking
+        const legato = flip(0.3); // 30% chance of legato
+        
+        const fxOptions = {
+            pinchHarmonic: pinchHarmonic ? rnd(0.5, 1) : 0,
+            tapping: tapping ? rnd(0.5, 1) : 0,
+            sweepPicking: sweepPicking ? rnd(0.5, 1) : 0,
+            legato: legato ? rnd(0.5, 1) : 0,
+            glide: flip(0.3) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
+        };
 
         pattern.push({
             note: usePowerChord ? choose(powerChordNotes) + chromaticOffset : rootNote + chromaticOffset,
             vel: palmMute,
             len: noteLength,
-            fx: {
-                glide: flip(0.3) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
-            },
+            fx: fxOptions,
         });
     }
     return pattern;
@@ -307,6 +317,68 @@ function chuggingRhythm(context) {
             len: noteLength,
             fx: {
                 glide: flip(0.2) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
+            },
+        });
+    }
+    return pattern;
+}
+
+function alternatePicking(context) {
+    const octave = choose([0, 12, 24]);
+    const pattern = [];
+    for (let i = 0; i < PatternSize; i++) {
+        const chord = getChord(context, i);
+        const rootNote = chord[0] + octave;
+        const powerChordNotes = powerChord(rootNote);
+        const usePowerChord = flip(0.7);
+        const chromaticRun = flip(0.2);
+        const chromaticOffset = chromaticRun ? rndInt(4) - 2 : 0;
+
+        pattern.push({
+            note: usePowerChord ? choose(powerChordNotes) + chromaticOffset : rootNote + chromaticOffset,
+            vel: 1,
+            fx: {
+                alternatePicking: flip(0.8) ? rnd(0.5, 1) : 0,
+            },
+        });
+    }
+    return pattern;
+}
+
+function sweepArpeggios(context) {
+    const octave = choose([0, 12, 24]);
+    const pattern = [];
+    for (let i = 0; i < PatternSize; i++) {
+        const chord = getChord(context, i);
+        const rootNote = chord[0] + octave;
+        const powerChordNotes = powerChord(rootNote);
+        const usePowerChord = flip(0.9);
+
+        pattern.push({
+            note: usePowerChord ? choose(powerChordNotes) : rootNote,
+            vel: 1,
+            fx: {
+                sweepArpeggio: flip(0.5) ? rnd(0.5, 1) : 0,
+            },
+        });
+    }
+    return pattern;
+}
+
+function harmonics(context) {
+    const octave = choose([0, 12, 24]);
+    const pattern = [];
+    for (let i = 0; i < PatternSize; i++) {
+        const chord = getChord(context, i);
+        const rootNote = chord[0] + octave;
+        const powerChordNotes = powerChord(rootNote);
+        const usePowerChord = flip(0.7);
+
+        pattern.push({
+            note: usePowerChord ? choose(powerChordNotes) : rootNote,
+            vel: 1,
+            fx: {
+                harmonic: flip(0.2) ? rnd(0.5, 1) : 0,
             },
         });
     }
@@ -441,10 +513,10 @@ function genTrack() {
         seedRNG(state.seedCode);
         patterns = [
             choose([bass, bass2, emptyNote])(state),
-            rnd() < 0.75 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm])(state) : emptyNote(), // Added tremoloRiff
-            rnd() < 0.75 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm])(state) : epicMetalSolo(state), // Added tremoloRiff
-            choose([emptyNote, riff])(state),
-            rnd() < 0.85 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(), // Added blastBeatDrum
+            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics])(state) : emptyNote(), // Added tremoloRiff
+            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics])(state) : epicMetalSolo(state), // Added tremoloRiff
+            choose([emptyNote, riff, emptyNote, tremoloRiff, emptyNote, aggressiveRiff, emptyNote, harmonics])(state),
+            rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum,metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(), // Added blastBeatDrum
         ];
     }
 
