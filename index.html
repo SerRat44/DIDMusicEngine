@@ -155,7 +155,7 @@ function getChord(context, rowIndex) {
 function bass(context) {
     return fill(PatternSize, i => {
         const chord = getChord(context, i);
-        const palmMute = flip(0.5) ? 0.5 : 1; // 50% chance of palm-muted notes
+        const palmMute = flip(0.5) ? 0.5 : 1; 
         return {
             note: i % 2 === 1 ? 'cont' : chord[0] + (Math.floor(i / 2) % 2) * 12 - 12,
             vel: palmMute,
@@ -185,14 +185,14 @@ function riff(context) {
         const rootNote = chord[0] + octave;
         const powerChordNotes = powerChord(rootNote);
         const usePowerChord = flip(0.7);
-        const palmMute = flip(0.5) ? 0.5 : 1; // 50% chance of palm-muted notes
-        const chromaticRun = flip(0.2); // 20% chance of a chromatic run
+        const palmMute = flip(0.5) ? 0.5 : 1;
+        const chromaticRun = flip(0.25); 
         const chromaticOffset = chromaticRun ? rndInt(4) - 2 : 0;
         pattern.push({
             note: usePowerChord ? choose(powerChordNotes) + chromaticOffset : rootNote + chromaticOffset,
             vel: palmMute,
             fx: {
-                glide: flip(0.2) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
+                glide: flip(0.25) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
             },
         });
     }
@@ -206,9 +206,9 @@ function aggressiveRiff(context) {
         const chord = getChord(context, i);
         const rootNote = chord[0] + octave;
         const powerChordNotes = powerChord(rootNote);
-        const usePowerChord = flip(0.9); // Increase the chance of power chords
+        const usePowerChord = flip(0.9);
         const palmMute = flip(0.7) ? 0.5 : 1;
-        const chromaticRun = flip(0.3); // Slightly increase the chance of a chromatic run
+        const chromaticRun = flip(0.3); 
         const chromaticOffset = chromaticRun ? rndInt(4) - 2 : 0;
         pattern.push({
             note: usePowerChord ? choose(powerChordNotes) + chromaticOffset : rootNote + chromaticOffset,
@@ -235,9 +235,9 @@ function tremoloRiff(context) {
         pattern.push({
             note: usePowerChord ? choose(powerChordNotes) + chromaticOffset : rootNote + chromaticOffset,
             vel: 1,
-            len: 1, // shorter notes for tremolo picking
+            len: 1,
             fx: {
-                glide: 0, // no glide for tremolo picking
+                glide: 0,
             },
         });
     }
@@ -251,16 +251,16 @@ function epicMetalSolo(context) {
         const chord = getChord(context, i);
         const rootNote = chord[0] + octave;
         const powerChordNotes = powerChord(rootNote);
-        const usePowerChord = flip(0.9); // Increase the chance of power chords
+        const usePowerChord = flip(0.9);
         const palmMute = flip(0.5) ? 0.5 : 1;
-        const chromaticRun = flip(0.5); // Significantly increase the chance of a chromatic run
+        const chromaticRun = flip(0.5);
         const chromaticOffset = chromaticRun ? rndInt(4) - 2 : 0;
-        const fastNotes = flip(0.8); // 80% chance of playing fast notes
+        const fastNotes = flip(0.8);
         const noteLength = fastNotes ? 1 : 2;
-        const pinchHarmonic = flip(0.2); // 20% chance of a pinch harmonic
-        const tapping = flip(0.15); // 15% chance of tapping
-        const sweepPicking = flip(0.1); // 10% chance of sweep picking
-        const legato = flip(0.3); // 30% chance of legato
+        const pinchHarmonic = flip(0.2);
+        const tapping = flip(0.15);
+        const sweepPicking = flip(0.1);
+        const legato = flip(0.3);
         
         const fxOptions = {
             pinchHarmonic: pinchHarmonic ? rnd(0.5, 1) : 0,
@@ -289,7 +289,7 @@ function gallopRhythm(context) {
         const powerChordNotes = powerChord(rootNote);
         const usePowerChord = flip(0.9);
         const palmMute = flip(0.5) ? 0.5 : 1;
-        const noteLength = i % 4 === 0 ? 2 : 1; // Create galloping rhythm
+        const noteLength = i % 4 === 0 ? 2 : 1;
         pattern.push({
             note: usePowerChord ? choose(powerChordNotes) : rootNote,
             vel: palmMute,
@@ -385,6 +385,46 @@ function harmonics(context) {
     return pattern;
 }
 
+function sliding(context) {
+    const octave = choose([0, 12, 24]);
+    const pattern = [];
+    for (let i = 0; i < PatternSize; i++) {
+        const chord = getChord(context, i);
+        const rootNote = chord[0] + octave;
+        const powerChordNotes = powerChord(rootNote);
+        const usePowerChord = flip(0.7);
+
+        pattern.push({
+            note: usePowerChord ? choose(powerChordNotes) : rootNote,
+            vel: 1,
+            fx: {
+                sliding: flip(0.4) ? rnd(0.5, 1) : 0,
+            },
+        });
+    }
+    return pattern;
+}
+
+function dimebagWhammy(context) {
+    const octave = choose([0, 12, 24]);
+    const pattern = [];
+    for (let i = 0; i < PatternSize; i++) {
+        const chord = getChord(context, i);
+        const rootNote = chord[0] + octave;
+        const powerChordNotes = powerChord(rootNote);
+        const usePowerChord = flip(0.7);
+
+        pattern.push({
+            note: usePowerChord ? choose(powerChordNotes) : rootNote,
+            vel: 1,
+            fx: {
+                dimebagWhammy: flip(0.15) ? rnd(0.5, 1) : 0,
+            },
+        });
+    }
+    return pattern;
+}
+
 function emptyNote() {
     return fill(PatternSize, _ => ({ note: '---' }));
 }
@@ -398,10 +438,10 @@ function metalDrum() {
     return fill(PatternSize, i => ({
         drum: i % 8 === 0 ? 'KCK' :
             i % 8 === 4 ? 'SNR' :
-                (i % 2 === 0 && flip(0.8)) ? 'KCK' : // Increase the chance of kick drum hits
-                    flip(0.3) ? choose(['KCK', 'SNR']) : 'NSS', // Increase the chance of snare drum hits
+                (i % 2 === 0 && flip(0.8)) ? 'KCK' :
+                    flip(0.3) ? choose(['KCK', 'SNR']) : 'NSS',
         vel: 0.6 + 0.2 * (1 - (i % 2)),
-        doubleBass: i % 4 === 2 ? 'KCK' : '---', // Add double bass drum hits
+        doubleBass: i % 4 === 2 ? 'KCK' : '---',
     }));
 }
 
@@ -409,18 +449,17 @@ function aggressiveMetalDrum() {
     return fill(PatternSize, i => ({
         drum: i % 8 === 0 ? 'KCK' :
             i % 8 === 4 ? 'SNR' :
-                (i % 2 === 0 && flip(0.8)) ? 'KCK' :
-                    flip(0.3) ? choose(['KCK', 'SNR', 'CYM']) : 'NSS', // Added cymbal crashes
+                (i % 2 === 0 && flip(0.85)) ? 'KCK' :
+                    flip(0.35) ? choose(['KCK', 'SNR', 'CYM']) : 'NSS',
         vel: 0.6 + 0.2 * (1 - (i % 2)),
-        doubleBass: i % 2 === 0 || flip(0.5) ? 'KCK' : '---', // More frequent double bass drum hits
-        fill: i % 16 === 15 ? choose(['SDR', 'CYM', 'FTM']) : '---', // Added occasional drum fills
+        doubleBass: i % 2 === 0 || flip(0.6) ? 'KCK' : '---', 
+        fill: i % 16 === 15 ? choose(['SDR', 'CYM', 'FTM']) : '---',
     }));
 }
 
-
 function blastBeatDrum() {
     return fill(PatternSize, i => ({
-        drum: i % 2 === 0 ? 'KCK' : 'SNR', // Alternating kick and snare for blast beats
+        drum: i % 2 === 0 ? 'KCK' : 'SNR',
         vel: 0.6 + 0.2 * (1 - (i % 2)),
         doubleBass: '---',
     }));
@@ -430,11 +469,13 @@ function breakdownDrum() {
     return fill(PatternSize, i => ({
         drum: i % 8 === 0 ? 'KCK' :
             i % 8 === 4 ? 'SNR' :
-                (i % 4 === 0 && flip(0.3)) ? 'CYM' : 'NSS', // Added cymbal crashes
+                (i % 4 === 0 && flip(0.4)) ? 'CYM' :
+                    (i % 4 === 2 && flip(0.3)) ? 'FTM' : 'NSS',
         vel: 0.6 + 0.2 * (1 - (i % 2)),
         doubleBass: i % 8 === 0 ? 'KCK' : '---',
     }));
 }
+
 
 
 const progressions = [
@@ -513,10 +554,10 @@ function genTrack() {
         seedRNG(state.seedCode);
         patterns = [
             choose([bass, bass2, emptyNote])(state),
-            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics])(state) : emptyNote(), // Added tremoloRiff
-            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics])(state) : epicMetalSolo(state), // Added tremoloRiff
-            choose([emptyNote, riff, emptyNote, tremoloRiff, emptyNote, aggressiveRiff, emptyNote, harmonics])(state),
-            rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum,metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(), // Added blastBeatDrum
+            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics, sliding, dimebagWhammy])(state) : emptyNote(), // Added tremoloRiff
+            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics, sliding, dimebagWhammy])(state) : epicMetalSolo(state), // Added tremoloRiff
+            choose([emptyNote, riff, emptyNote, tremoloRiff, emptyNote, aggressiveRiff, emptyNote, harmonics, emptyNote, sliding])(state),
+            rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(), // Added blastBeatDrum
         ];
     }
 
