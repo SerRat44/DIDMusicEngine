@@ -554,10 +554,10 @@ function genTrack() {
         seedRNG(state.seedCode);
         patterns = [
             choose([bass, bass2, emptyNote])(state),
-            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics, sliding, dimebagWhammy])(state) : emptyNote(), // Added tremoloRiff
-            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics, sliding, dimebagWhammy])(state) : epicMetalSolo(state), // Added tremoloRiff
+            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics, sliding, dimebagWhammy, aggressiveRiff, riff])(state) : emptyNote(),
+            rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics, sliding, dimebagWhammy, aggressiveRiff, riff])(state) : epicMetalSolo(state),
             choose([emptyNote, riff, emptyNote, tremoloRiff, emptyNote, aggressiveRiff, emptyNote, harmonics, emptyNote, sliding])(state),
-            rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(), // Added blastBeatDrum
+            rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(),
         ];
     }
 
@@ -735,9 +735,9 @@ function Audio(ctx) {
             } else if (note.note === 'cont') {
                 // do nothing
             } else {
-                noteOn(note.note, note.fx?.glide);
+                noteOn(note.note, note.fx ? note.fx.glide : undefined);
             }
-            set(width, note.fx?.pulseWidth ?? 0.0);
+            set(width, note.fx ? (note.fx.pulseWidth || 0.0) : 0.0);
         }
 
         return { play }
