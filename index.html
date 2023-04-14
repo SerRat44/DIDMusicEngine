@@ -543,8 +543,6 @@ const progressions = [
 
 ];
 
-
-
 function bpmClock() {
     let intervalHandle = {
         bpmClock: 0
@@ -618,7 +616,9 @@ function genTrack() {
             clock.set(state.bpm, frame);
 			displayObj.track(patterns, save(state));
 			
-			
+			console.log(patterns);
+			console.log(state);
+			console.log(save(state));
         }
 		synths[0].play(patterns[0][positionInPattern]);
         synths[1].play(patterns[1][positionInPattern]);
@@ -645,8 +645,6 @@ function genTrack() {
 	console.log(state);
 	console.log(save(state));
 }
-
-
 
 
 
