@@ -17,23 +17,53 @@ body {
 button {
     margin-bottom: 1rem;
 }
-#trackDisplay {
-  display: flex;
-  justify-content: space-evenly;
-  margin: 4px;
-}
-#trackCode {
+#trackCodeWrapper {
   margin: 4px;
   margin-bottom: 1rem;
+  font-weight: bold;
+  font-size: 1.4em;
 }
-.song-column {
+#trackCode {
+  display: inline-block;
+  cursor: pointer;
+  color: #ff00ff;
+  background-color: #f8f9fa;
+  padding: 4px;
+  border: 2px solid #ced4da;
+  border-radius: 4px;
+}
+#trackDisplay {
+  display: flex;
+  margin: 4px;
+  align-items: start;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.songColumn {
+  border: 1px solid lightgrey;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 4px;
+  margin: 6px;
+  background-color: lightgrey;
+  padding: 10px;
+
+}
+.output-label {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 6px;
+	font-size: 1.1em;
 }
 .highlight {
-  background-color: #ffcc00;
+  background-color: #ff00ff;
+}
+.note {
+  width: 100%;
+  padding: 2px;
+  box-sizing: border-box;
+  text-align: center;
 }
 </style>
 </head>
@@ -47,7 +77,10 @@ button {
 		<button id="generateBtn">Generate Track</button>
 		<button id="resetBtn" disabled>Reset</button>
 	</div>
-	<div id="trackCode"></div>
+	<div id="trackCodeWrapper">
+		<div>Track Code</div>
+		<div id="trackCode" onclick="copyTrackCode()"></div>
+	</div>
 	<div id="trackDisplay"></div>
 </div>
 
@@ -154,13 +187,13 @@ function modulate(key, scale) {
 const PatternSize = 64;
 
 
-
 function getChord(context, rowIndex) {
     const { progression, key, scale } = context;
     const progIndex = Math.floor(rowIndex / 4);
     const chordNumber = progression[progIndex];
     return chordTypes.triad.map(noteIndex => key + scale[(chordNumber - 1 + noteIndex) % scale.length]);
 }
+
 
 
 function bass(context) {
@@ -576,9 +609,6 @@ function genTrack() {
             rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(),
         ];
     }
-	console.log(patterns);
-	console.log(state);
-	console.log(save(state));
 	
     function frame(f) {
         const positionInPattern = f % PatternSize;
@@ -588,9 +618,7 @@ function genTrack() {
             clock.set(state.bpm, frame);
 			displayObj.track(patterns, save(state));
 			
-			console.log(patterns);
-			console.log(state);
-			console.log(save(state));
+			
         }
 		synths[0].play(patterns[0][positionInPattern]);
         synths[1].play(patterns[1][positionInPattern]);
@@ -612,6 +640,10 @@ function genTrack() {
 		document.getElementById("resetBtn").disabled = true;
 		document.getElementById("generateBtn").disabled = false;
 	});
+	
+	console.log(patterns);
+	console.log(state);
+	console.log(save(state));
 }
 
 
@@ -842,10 +874,11 @@ return {
 function display () {
 
 	function getNoteName(noteValue) {
-		const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-		const octave = Math.floor(noteValue / 12);
-		return noteNames[noteValue % 12] + octave;
-	}
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const noteIndex = ((noteValue % 12) + 12) % 12;
+    const octave = Math.floor(noteValue / 12);
+    return noteNames[noteIndex] + octave;
+}
 
 	function track(patterns, trackCode) {
     const songDisplay = document.getElementById("trackDisplay");
@@ -854,12 +887,18 @@ function display () {
 
     // Clear existing content and set track code
     songDisplay.innerHTML = '';
-    trackCodeElement.textContent = `Track Code: ${trackCode}`;
+    trackCodeElement.textContent = `${trackCode}`;
 
     // Create columns for each pattern
     for (let i = 0; i < patterns.length; i++) {
         const songColumn = document.createElement("div");
-        songColumn.classList.add("song-column");
+        songColumn.classList.add("songColumn");
+
+        // Create and append the output label
+        const outputLabel = document.createElement("div");
+        outputLabel.classList.add("output-label");
+        outputLabel.textContent = `Output ${i + 1}`;
+        songColumn.appendChild(outputLabel);
 
         for (let j = 0; j < patterns[i].length; j++) {
             const noteElement = document.createElement("div");
@@ -893,15 +932,15 @@ function highlight(patterns, frame) {
 
     // Remove existing highlight class
     for (let i = 0; i < patterns.length; i++) {
-        const column = document.getElementsByClassName('song-column')[i];
+        const column = document.getElementsByClassName('songColumn')[i];
         const currentHighlight = column.querySelector('.highlight');
         if (currentHighlight) currentHighlight.classList.remove('highlight');
     }
 
     // Add highlight class to the current row
     for (let i = 0; i < patterns.length; i++) {
-        const column = document.getElementsByClassName('song-column')[i];
-        const row = column.children[positionInPattern];
+        const column = document.getElementsByClassName('songColumn')[i];
+        const row = column.children[positionInPattern + 1]; // Add + 1 here
         row.classList.add('highlight');
     }
 }
@@ -912,6 +951,15 @@ return {
 	
 }
 //end of display functions
+
+async function copyTrackCode() {
+  const trackCodeElement = document.getElementById("trackCode");
+  try {
+    await navigator.clipboard.writeText(trackCodeElement.textContent);
+  } catch (err) {
+    console.error('Failed to copy track code: ', err);
+  }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
 document.getElementById("generateBtn").addEventListener("click", () => {
