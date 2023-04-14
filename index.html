@@ -361,10 +361,12 @@ function genTrack() {
 	console.log(patterns);
 	console.log(state);
 	console.log(save(state));
+	document.getElementById("generateBtn").disabled = true;
 
     function frame(f) {
         const positionInPattern = f % PatternSize;
         if (f % 128 === 0 && f !== 0) {
+
             mutateState(state);
             newPatterns();
 			
@@ -382,7 +384,12 @@ function genTrack() {
         synths[4].play(patterns[4][positionInPattern]);
     }
     clock.set(state.bpm, frame);
+
+	
+
 }
+
+
 
 
 
@@ -434,7 +441,7 @@ function createInitialState(seedOrSave) {
         
         return {
             key: rndInt(12),
-            scale: scales.phrygianDominant, // Use chooseRandomScale here
+            scale: chooseRandomScale(),
             progression: progressions[rndInt(12)],
             bpm: rndInt(50) + 110,
             seedCode: createSeedCode(),
@@ -594,12 +601,17 @@ return {
 }
 //end of audio
 
+
+
+
 document.addEventListener("DOMContentLoaded", () => {
 document.getElementById("generateBtn").addEventListener("click", () => {
-        genTrack();
-    });
+	genTrack();
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
 
-    
+	});
+ 
 });
 </script>
 </body>
