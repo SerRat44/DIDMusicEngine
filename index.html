@@ -167,7 +167,8 @@ function bass(context) {
 function bass2(context) {
     return fill(PatternSize, i => {
         const chord = getChord(context, i);
-        return { note: i % 8 === 0 ? ((chord[0] + 4) % 12) - 4 : 'cont', vel: 2, fx: { pulseWidth: rnd() } };
+        const noteOptions = [chord[0] - 4, chord[0] + 5, chord[0] - 12];
+        return { note: i % 8 === 0 ? choose(noteOptions) : 'cont', vel: 2, fx: { pulseWidth: rnd() } };
     });
 }
 
@@ -291,6 +292,27 @@ function gallopRhythm(context) {
     return pattern;
 }
 
+function chuggingRhythm(context) {
+    const octave = choose([0, 12, 24]);
+    const pattern = [];
+    for (let i = 0; i < PatternSize; i++) {
+        const chord = getChord(context, i);
+        const rootNote = chord[0] + octave;
+        const powerChordNotes = powerChord(rootNote);
+        const chug = i % 2 === 0 && flip(0.9);
+        const noteLength = chug ? 1 : 2;
+        pattern.push({
+            note: chug ? choose(powerChordNotes) : rootNote,
+            vel: chug ? 0.5 : 1,
+            len: noteLength,
+            fx: {
+                glide: flip(0.2) ? choose([0.1, 0.2, 0.5, 0.7]) : 0,
+            },
+        });
+    }
+    return pattern;
+}
+
 function emptyNote() {
     return fill(PatternSize, _ => ({ note: '---' }));
 }
@@ -319,8 +341,10 @@ function aggressiveMetalDrum() {
                     flip(0.3) ? choose(['KCK', 'SNR', 'CYM']) : 'NSS', // Added cymbal crashes
         vel: 0.6 + 0.2 * (1 - (i % 2)),
         doubleBass: i % 2 === 0 || flip(0.5) ? 'KCK' : '---', // More frequent double bass drum hits
+        fill: i % 16 === 15 ? choose(['SDR', 'CYM', 'FTM']) : '---', // Added occasional drum fills
     }));
 }
+
 
 function blastBeatDrum() {
     return fill(PatternSize, i => ({
@@ -339,6 +363,7 @@ function breakdownDrum() {
         doubleBass: i % 8 === 0 ? 'KCK' : '---',
     }));
 }
+
 
 const progressions = [
     [1, 1, 6, 6, 4, 4, 5, 5, 3, 3, 4, 4, 5, 5, 6, 6],
@@ -416,10 +441,10 @@ function genTrack() {
         seedRNG(state.seedCode);
         patterns = [
             choose([bass, bass2, emptyNote])(state),
-            rnd() < 0.7 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm])(state) : emptyNote(), // Added tremoloRiff
-            rnd() < 0.7 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm])(state) : epicMetalSolo(state), // Added tremoloRiff
+            rnd() < 0.75 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm])(state) : emptyNote(), // Added tremoloRiff
+            rnd() < 0.75 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm])(state) : epicMetalSolo(state), // Added tremoloRiff
             choose([emptyNote, riff])(state),
-            rnd() < 0.8 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum])(state) : emptyNote(), // Added blastBeatDrum
+            rnd() < 0.85 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(), // Added blastBeatDrum
         ];
     }
 
