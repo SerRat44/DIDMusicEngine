@@ -646,7 +646,6 @@ function genTrack() {
 
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const au = Audio(ctx);
-	au.setVolume(settings.trackVolume);
 	
 	const synths = [
     au.SquareSynth(),
@@ -712,6 +711,44 @@ function genTrack() {
 	}
 }
 
+function playEffect(effect) {
+  const { bpm, notes } = effect;
+  const state = createInitialState("");
+
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const au = Audio(ctx);
+  au.setVolume(settings.trackVolume);
+
+  const synths = [
+    au.SquareSynth(),
+    au.SquareSynth(-0.5),
+    au.SquareSynth(0.5),
+  ];
+
+  const clock = bpmClock();
+  let fN = 0;
+
+  function frame(f) {
+    const positionInPattern = f % notes.length;
+    synths[0].play(notes[positionInPattern]);
+    synths[1].play(notes[positionInPattern]);
+    synths[2].play(notes[positionInPattern]);
+  }
+
+  clock.set(bpm, frame);
+
+  const duration = (60000 / bpm) * notes.length;
+  setTimeout(() => {
+    clock.stop();
+    synths.forEach((synth) => synth.stop());
+    ctx.close();
+  }, duration);
+}
+
+const exampleEffect = {
+  bpm: 120,
+  notes: ['C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6', 'rest']
+};
 
 // start of save/load
 function hex(v) {
@@ -1068,6 +1105,7 @@ loadSettings();
 
 document.getElementById("generateBtn").addEventListener("click", () => {
     trackControl = genTrack();
+	trackControl.changeVolume(settings.trackVolume);
 });
 document.getElementById("resetBtn").addEventListener("click", () => {
     trackControl.stop();
