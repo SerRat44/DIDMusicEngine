@@ -858,8 +858,12 @@ function Audio(ctx) {
             set(width, note.fx ? (note.fx.pulseWidth || 0.0) : 0.0);
         }
 		function stop() {
-			noteOff();
-			outputPanner.disconnect();
+			const releaseTime = 0.01;
+			gain.cancelScheduledValues(ctx.currentTime);
+			gain.setTargetAtTime(0, ctx.currentTime, releaseTime);
+			setTimeout(() => {
+				outputPanner.disconnect();
+			}, releaseTime * 1000);
 		}
 		return { play, stop }
     }
@@ -883,56 +887,61 @@ function Audio(ctx) {
     noiseGain.connect(noisePan);
     noisePan.connect(globalGain);
 
-    function play(slot) {
-        const vel = slot.vel ? slot.vel : 1;
-        if (slot.drum === 'KCK') {
-            toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
-            toneOscillator.detune.setValueAtTime(3000, ctx.currentTime);
-            toneOscillator.detune.setTargetAtTime(0, ctx.currentTime, 0.07);
-            toneGain.gain.cancelScheduledValues(ctx.currentTime);
-            toneGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
-            toneGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.2 * vel, 0.13 * vel, 0.05 * vel, 0.0]), ctx.currentTime + 0.001, 0.10);
-        } else if (slot.drum === 'NSS') {
-            noiseGain.gain.cancelScheduledValues(ctx.currentTime);
-            noiseGain.gain.setValueAtTime(0.1 * vel, ctx.currentTime);
-            noiseGain.gain.setValueCurveAtTime(new Float32Array([0.1 * vel, 0.04 * vel, 0.0]), ctx.currentTime + 0.001, 0.08);
+		function play(slot) {
+			const vel = slot.vel ? slot.vel : 1;
+			if (slot.drum === 'KCK') {
+				toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
+				toneOscillator.detune.setValueAtTime(3000, ctx.currentTime);
+				toneOscillator.detune.setTargetAtTime(0, ctx.currentTime, 0.07);
+				toneGain.gain.cancelScheduledValues(ctx.currentTime);
+				toneGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
+				toneGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.2 * vel, 0.13 * vel, 0.05 * vel, 0.0]), ctx.currentTime, 0.10);
+			} else if (slot.drum === 'NSS') {
+				noiseGain.gain.cancelScheduledValues(ctx.currentTime);
+				noiseGain.gain.setValueAtTime(0.1 * vel, ctx.currentTime);
+				noiseGain.gain.setValueCurveAtTime(new Float32Array([0.1 * vel, 0.04 * vel, 0.0]), ctx.currentTime, 0.08);
 
-            if ("pan" in noisePan) {
-                noisePan.pan.cancelScheduledValues(ctx.currentTime);
-                noisePan.pan.setValueAtTime(rnd() * 0.4 - 0.2, ctx.currentTime);
-            }
-        } else if (slot.drum === 'SNR') {
-            toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
-            toneOscillator.detune.setValueAtTime(2400, ctx.currentTime);
-            toneOscillator.detune.setTargetAtTime(600, ctx.currentTime, 0.04);
-            toneGain.gain.cancelScheduledValues(ctx.currentTime);
-            toneGain.gain.setValueAtTime(0.15 * vel, ctx.currentTime);
-            toneGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.2 * vel, 0.13 * vel, 0.05 * vel, 0.0]), ctx.currentTime + 0.001, 0.10);
+				if ("pan" in noisePan) {
+					noisePan.pan.cancelScheduledValues(ctx.currentTime);
+					noisePan.pan.setValueAtTime(rnd() * 0.4 - 0.2, ctx.currentTime);
+				}
+			} else if (slot.drum === 'SNR') {
+				toneOscillator.detune.cancelScheduledValues(ctx.currentTime);
+				toneOscillator.detune.setValueAtTime(2400, ctx.currentTime);
+				toneOscillator.detune.setTargetAtTime(600, ctx.currentTime, 0.04);
+				toneGain.gain.cancelScheduledValues(ctx.currentTime);
+				toneGain.gain.setValueAtTime(0.15 * vel, ctx.currentTime);
+				toneGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.2 * vel, 0.13 * vel, 0.05 * vel, 0.0]), ctx.currentTime, 0.10);
 
-            noiseGain.gain.cancelScheduledValues(ctx.currentTime);
-            noiseGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
-            noiseGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.15 * vel, 0.0]), ctx.currentTime + 0.001, 0.15);
-        }
-    }
-    function stop() {
-		toneGain.gain.cancelScheduledValues(ctx.currentTime);
-		toneGain.gain.setValueAtTime(0, ctx.currentTime);
-		toneGain.disconnect();
-		noiseGain.gain.cancelScheduledValues(ctx.currentTime);
-		noiseGain.gain.setValueAtTime(0, ctx.currentTime);
-		noiseGain.disconnect();
+				noiseGain.gain.cancelScheduledValues(ctx.currentTime);
+				noiseGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
+				noiseGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.15 * vel, 0.0]), ctx.currentTime, 0.15);
+			}
+		}
+		function stop() {
+			const releaseTime = 0.01;
+
+			toneGain.gain.cancelScheduledValues(ctx.currentTime);
+			toneGain.gain.setTargetAtTime(0, ctx.currentTime, releaseTime);
+			setTimeout(() => {
+				toneGain.disconnect();
+			}, releaseTime * 1000);
+			noiseGain.gain.cancelScheduledValues(ctx.currentTime);
+			noiseGain.gain.setTargetAtTime(0, ctx.currentTime, releaseTime);
+			setTimeout(() => {
+				noiseGain.disconnect();
+			}, releaseTime * 1000);
+		}
+		return {
+			play,
+			stop,
+		}
 	}
 	return {
-		play,
-		stop,
+		SquareSynth,
+		DrumSynth,
+		setVolume
 	}
-}
-
-return {
-    SquareSynth,
-    DrumSynth,
-	setVolume
-}
 }
 //end of audio
 
