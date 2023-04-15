@@ -633,6 +633,8 @@ function mutateState(state) {
 	
 }
 
+let trackControl;
+
 function genTrack() {
     const seedOrSave = document.getElementById("seedInput").value;
     const state = createInitialState(seedOrSave);
@@ -664,7 +666,6 @@ function genTrack() {
             rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(),
         ];
     }
-	
     function frame(f) {
         const positionInPattern = f % PatternSize;
         if (f % 128 === 0 && f !== 0) {
@@ -685,28 +686,31 @@ function genTrack() {
 		
 		displayObj.highlight(patterns, f);
     }
+	function stop() {
+		synths.forEach(synth => synth.stop());
+		clock.stop();
+		ctx.close();
+	}
+	function changeVolume(volume) {
+		au.setVolume(volume);
+	}
+	
 	newPatterns();
     clock.set(state.bpm, frame);
 	displayObj.track(patterns, save(state));
 	
 	document.getElementById("resetBtn").disabled = false;
 	document.getElementById("generateBtn").disabled = true;
-	document.getElementById("resetBtn").addEventListener("click", () => {
-		synths.forEach(synth => synth.stop());
-		clock.stop();
-		document.getElementById("resetBtn").disabled = true;
-		document.getElementById("generateBtn").disabled = false;
-	});
-	trackVolume.addEventListener("input", (event) => {
-		au.setVolume(settings.trackVolume);
-	});
- 
-	
+
 	console.log(patterns);
 	console.log(state);
 	console.log(save(state));
+	
+	return {
+		stop,
+		changeVolume
+	}
 }
-
 
 
 // start of save/load
@@ -1063,11 +1067,19 @@ loadSettings();
 
 
 document.getElementById("generateBtn").addEventListener("click", () => {
-	genTrack();
+    trackControl = genTrack();
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+    trackControl.stop();
+    document.getElementById("resetBtn").disabled = true;
+    document.getElementById("generateBtn").disabled = false;
 });
 trackVolume.addEventListener("input", (event) => {
-		updateVolume("trackVolume", event);
-	});
+	if(trackControl) {
+		trackControl.changeVolume(settings.trackVolume);
+	}
+	updateVolume("trackVolume", event);
+});
  
 
  
