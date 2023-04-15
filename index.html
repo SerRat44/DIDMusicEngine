@@ -13,6 +13,7 @@ body {
   overflow-y: auto;
   background-color: #f2f2f2;
   text-align: center;
+  padding-bottom: 80px;
 }
 button {
     margin-bottom: 1rem;
@@ -65,23 +66,69 @@ button {
   box-sizing: border-box;
   text-align: center;
 }
+#bottomPanel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background-color: #f2f2f2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.2);
+}
+#volumeControl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#playSliderWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin: 4px;
+}
+#playPauseBtn {
+  font-size: 1.2em;
+  margin: 4px;
+}
 </style>
 </head>
-
 <body>
 
 <div id="contentWrapper">
-	<h1>DID Music Engine</h1>
-	<div id="contentWrapper">
-		<input id="seedInput" type="text" placeholder="optional seed or trackcode">
-		<button id="generateBtn">Generate Track</button>
-		<button id="resetBtn" disabled>Reset</button>
-	</div>
-	<div id="trackCodeWrapper">
-		<div>Track Code</div>
-		<div id="trackCode" onclick="copyTrackCode()"></div>
-	</div>
-	<div id="trackDisplay"></div>
+  <h1>DID Music Engine</h1>
+  <div id="contentWrapper">
+    <input id="seedInput" type="text" placeholder="optional seed or trackcode">
+    <button id="generateBtn">Generate Track</button>
+    <button id="resetBtn" disabled>Reset</button>
+  </div>
+  <div id="trackCodeWrapper">
+    <div>Track Code</div>
+    <div id="trackCode" onclick="copyTrackCode()"></div>
+  </div>
+  <div id="trackDisplay"></div>
+</div>
+
+<div id="bottomPanel">
+  <div></div>
+  <div id="playSliderWrapper">
+    <!--
+    <button id="playPauseBtn">▶︎/❚❚</button>
+	<span id="timeValue">00:00</span>
+    <input type="range" id="longSlider" min="0" max="127" value="0" step="1" style="width: 60%;">
+	-->
+  </div>
+  <div id="volumeControl">
+    <div>
+      <label for="trackVolume">Volume:</label>
+      <span id="trackVolumeValue"></span>
+    </div>
+    <input type="range" id="trackVolume" min="0" max="100" value="50">
+  </div>
 </div>
 
 <script>
@@ -597,6 +644,7 @@ function genTrack() {
 
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const au = Audio(ctx);
+	au.setVolume(settings.trackVolume);
 	
 	const synths = [
     au.SquareSynth(),
@@ -613,7 +661,7 @@ function genTrack() {
             rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics, sliding, dimebagWhammy, aggressiveRiff, riff])(state) : emptyNote(),
             rnd() < 0.80 ? choose([riff, aggressiveRiff, tremoloRiff, gallopRhythm, chuggingRhythm, alternatePicking, sweepArpeggios, harmonics, sliding, dimebagWhammy, aggressiveRiff, riff])(state) : epicMetalSolo(state),
             choose([emptyNote, riff, emptyNote, tremoloRiff, emptyNote, aggressiveRiff, emptyNote, harmonics, emptyNote, sliding])(state),
-            rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(),
+            rnd() < 0.90 ? choose([metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, blastBeatDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum, metalDrum, aggressiveMetalDrum, breakdownDrum])(state) : emptyNote(),
         ];
     }
 	
@@ -649,6 +697,11 @@ function genTrack() {
 		document.getElementById("resetBtn").disabled = true;
 		document.getElementById("generateBtn").disabled = false;
 	});
+	trackVolume.addEventListener("input", (event) => {
+		updateVolume("trackVolume", event)
+		au.setVolume(settings.trackVolume);
+	});
+ 
 	
 	console.log(patterns);
 	console.log(state);
@@ -724,6 +777,12 @@ const A3Frequency = 440;
 const A0Frequency = A3Frequency / 8;
 
 function Audio(ctx) {
+	const globalGain = gainNode();
+	globalGain.connect(ctx.destination);
+	
+	function setVolume(value) {
+        globalGain.gain.setValueAtTime(value, ctx.currentTime);
+    }
     function oscillatorNode(type, freq = 440) {
         const node = ctx.createOscillator();
         node.type = type;
@@ -772,7 +831,7 @@ function Audio(ctx) {
         wavetableOffsetGain.connect(pulseWavetable);
         pulseWavetable.connect(pulseOutputGain);
         pulseOutputGain.connect(outputPanner);
-        outputPanner.connect(ctx.destination);
+		outputPanner.connect(globalGain);
 
         const freq = wavetableTrigger.frequency,
             width = wavetableOffsetGain.gain,
@@ -818,12 +877,12 @@ function Audio(ctx) {
     noiseWavetableTrigger.start();
 
     toneOscillator.connect(toneGain);
-    toneGain.connect(ctx.destination);
+    toneGain.connect(globalGain);
 
     noiseWavetableTrigger.connect(noiseWavetable);
     noiseWavetable.connect(noiseGain);
     noiseGain.connect(noisePan);
-    noisePan.connect(ctx.destination);
+    noisePan.connect(globalGain);
 
     function play(slot) {
         const vel = slot.vel ? slot.vel : 1;
@@ -833,11 +892,11 @@ function Audio(ctx) {
             toneOscillator.detune.setTargetAtTime(0, ctx.currentTime, 0.07);
             toneGain.gain.cancelScheduledValues(ctx.currentTime);
             toneGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
-            toneGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.2 * vel, 0.13 * vel, 0.05 * vel, 0.0]), ctx.currentTime, 0.10);
+            toneGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.2 * vel, 0.13 * vel, 0.05 * vel, 0.0]), ctx.currentTime + 0.001, 0.10);
         } else if (slot.drum === 'NSS') {
             noiseGain.gain.cancelScheduledValues(ctx.currentTime);
             noiseGain.gain.setValueAtTime(0.1 * vel, ctx.currentTime);
-            noiseGain.gain.setValueCurveAtTime(new Float32Array([0.1 * vel, 0.04 * vel, 0.0]), ctx.currentTime, 0.08);
+            noiseGain.gain.setValueCurveAtTime(new Float32Array([0.1 * vel, 0.04 * vel, 0.0]), ctx.currentTime + 0.001, 0.08);
 
             // Ugly workaround for safari being a bitch
             if ("pan" in noisePan) {
@@ -850,10 +909,11 @@ function Audio(ctx) {
             toneOscillator.detune.setTargetAtTime(600, ctx.currentTime, 0.04);
             toneGain.gain.cancelScheduledValues(ctx.currentTime);
             toneGain.gain.setValueAtTime(0.15 * vel, ctx.currentTime);
-            toneGain.gain.setValueCurveAtTime(new Float32Array([0.15 * vel, 0.05 * vel, 0.01 * vel, 0]), ctx.currentTime, 0.10);
+            toneGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.2 * vel, 0.13 * vel, 0.05 * vel, 0.0]), ctx.currentTime + 0.001, 0.10);
+
             noiseGain.gain.cancelScheduledValues(ctx.currentTime);
             noiseGain.gain.setValueAtTime(0.2 * vel, ctx.currentTime);
-            noiseGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.15 * vel, 0.0]), ctx.currentTime, 0.15);
+            noiseGain.gain.setValueCurveAtTime(new Float32Array([0.2 * vel, 0.15 * vel, 0.0]), ctx.currentTime + 0.001, 0.15);
         }
     }
     function stop() {
@@ -866,27 +926,26 @@ function Audio(ctx) {
 	}
 	return {
 		play,
-		stop
+		stop,
 	}
 }
 
 return {
     SquareSynth,
-    DrumSynth
+    DrumSynth,
+	setVolume
 }
 }
 //end of audio
 
 //start of display
 function display () {
-
 	function getNoteName(noteValue) {
 		const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 		const noteIndex = ((noteValue % 12) + 12) % 12;
 		const octave = Math.floor(noteValue / 12);
 		return noteNames[noteIndex] + octave;
 	}
-
 	function track(patterns, trackCode) {
 		const songDisplay = document.getElementById("trackDisplay");
 		const trackCodeElement = document.getElementById("trackCode");
@@ -911,7 +970,7 @@ function display () {
             if (patterns[i][j]) {
 				if (patterns[i][j].note === '---') {
 					noteElement.textContent = '-';
-				} else if (patterns[i][j].note === 'cont') { // Add this case for continuous notes
+				} else if (patterns[i][j].note === 'cont') {
 					noteElement.textContent = '•';
 				} else if (patterns[i][j].note !== undefined) {
 					noteElement.textContent = getNoteName(patterns[i][j].note);
@@ -929,7 +988,6 @@ function display () {
 
 		return columns;
 	}
-
 	function highlight(patterns, frame) {
 		const positionInPattern = frame % PatternSize;
 
@@ -945,7 +1003,6 @@ function display () {
 			row.classList.add('highlight');
 		}
 	}
-	
 	return {
 		track,
 		highlight
@@ -962,10 +1019,47 @@ async function copyTrackCode() {
   }
 }
 
+let settings = {
+    trackVolume: 0.5
+};
+
+function updateVolume(volumeType, volume) {
+  settings[volumeType] = parseFloat(volume.target.value) / 100;
+
+  updateSliderValues();
+  saveSettings();
+}
+
+function saveSettings() {
+  localStorage.setItem('DIDMusicEngine.settings', JSON.stringify(settings));
+}
+
+function setSliderPositions() {
+  trackVolume.value = settings.trackVolume * 100;
+}
+
+function updateSliderValues() {
+  trackVolumeValue.textContent = `${trackVolume.value}%`;
+}
+
+function loadSettings() {
+  const storedSettings = localStorage.getItem('DIDMusicEngine.settings');
+  if (storedSettings) {
+    settings = JSON.parse(storedSettings);
+  }
+  setSliderPositions();
+  updateSliderValues();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+loadSettings();
+
+
 document.getElementById("generateBtn").addEventListener("click", () => {
 	genTrack();
 });
+
+ 
 
  
 });
