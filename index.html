@@ -578,25 +578,24 @@ function breakdownDrum() {
 
 
 
-const progressions = [
-    [1,1,6,6,4,4,5,5,3,3,4,4,5,5,6,6],
-    [1,1,6,6,4,4,5,5,1,1,6,6,3,3,5,5],
-    [4, 4, 5, 5, 1, 1, 1, 1, 5, 5, 6, 6, 1, 1, 1, 1],
-	[1, 1, 6, 6, 2, 2, 5, 5, 1, 1, 6, 6, 2, 2, 5, 5],
-    [5, 5, 1, 1, 6, 6, 4, 4, 5, 5, 1, 1, 6, 6, 4, 4],
-    [1, 1, 4, 4, 5, 5, 1, 1, 6, 6, 4, 4, 5, 5, 1, 1],
-    [5, 5, 4, 4, 1, 1, 1, 1, 5, 5, 6, 6, 1, 1, 1, 1],
-	[5, 5, 6, 6, 2, 2, 4, 4, 5, 5, 6, 6, 2, 2, 4, 4],
-	[6, 6, 1, 1, 4, 4, 3, 3, 6, 6, 1, 1, 4, 4, 3, 3],
-	[4, 4, 1, 1, 5, 5, 6, 6, 4, 4, 1, 1, 5, 5, 6, 6],
-    [6, 6, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 5, 5, 5, 5],
-    [1, 1, 1, 1, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5],
-    [6, 6, 6, 6, 4, 4, 4, 4, 1, 1, 1, 1, 1, 1, 5, 5],
-	[1, 1, 4, 4, 6, 6, 5, 5, 1, 1, 4, 4, 6, 6, 5, 5],
-    [1, 1, 6, 6, 4, 4, 5, 5, 1, 1, 6, 6, 4, 4, 5, 5],
-	[1, 1, 6, 6, 5, 5, 4, 4, 1, 1, 6, 6, 5, 5, 4, 4],
-	[1, 1, 4, 4, 6, 6, 2, 2, 1, 1, 4, 4, 6, 6, 2, 2],
-
+const progressions=[
+	[1,1,6,6,4,4,5,5,3,3,4,4,5,5,6,6],
+	[1,1,6,6,4,4,5,5,1,1,6,6,3,3,5,5],
+	[4,4,5,5,1,1,1,1,5,5,6,6,1,1,1,1],
+	[1,1,6,6,2,2,5,5,1,1,6,6,2,2,5,5],
+	[5,5,1,1,6,6,4,4,5,5,1,1,6,6,4,4],
+	[1,1,4,4,5,5,1,1,6,6,4,4,5,5,1,1],
+	[5,5,4,4,1,1,1,1,5,5,6,6,1,1,1,1],
+	[5,5,6,6,2,2,4,4,5,5,6,6,2,2,4,4],
+	[6,6,1,1,4,4,3,3,6,6,1,1,4,4,3,3],
+	[4,4,1,1,5,5,6,6,4,4,1,1,5,5,6,6],
+	[6,6,6,6,5,5,5,5,4,4,4,4,5,5,5,5],
+	[1,1,1,1,3,3,3,3,4,4,4,4,5,5,5,5],
+	[6,6,6,6,4,4,4,4,1,1,1,1,1,1,5,5],
+	[1,1,4,4,6,6,5,5,1,1,4,4,6,6,5,5],
+	[1,1,6,6,4,4,5,5,1,1,6,6,4,4,5,5],
+	[1,1,6,6,5,5,4,4,1,1,6,6,5,5,4,4],
+	[1,1,4,4,6,6,2,2,1,1,4,4,6,6,2,2]
 ];
 
 function bpmClock() {
@@ -689,6 +688,7 @@ function genTrack() {
 		synths.forEach(synth => synth.stop());
 		clock.stop();
 		ctx.close();
+		return;
 	}
 	function changeVolume(volume) {
 		au.setVolume(volume);
@@ -712,43 +712,49 @@ function genTrack() {
 }
 
 function playEffect(effect) {
-  const { bpm, notes } = effect;
-  const state = createInitialState("");
+    const clock = bpmClock();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const au = Audio(ctx);
+    au.setVolume(1);
 
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const au = Audio(ctx);
-  au.setVolume(settings.trackVolume);
+    const synths = [
+        au.SquareSynth(),
+        au.SquareSynth(-0.5),
+        au.SquareSynth(0.5)
+    ];
 
-  const synths = [
-    au.SquareSynth(),
-    au.SquareSynth(-0.5),
-    au.SquareSynth(0.5),
-  ];
+    function noteToMidi(note) {
+        const octave = parseInt(note.slice(-1));
+        const pitchClass = note.slice(0, -1);
+        const pitchClassToNumber = {
+            "C": 0, "C#": 1, "D": 2, "D#": 3, "E": 4,
+            "F": 5, "F#": 6, "G": 7, "G#": 8, "A": 9,
+            "A#": 10, "B": 11
+        };
+        return 12 * octave + pitchClassToNumber[pitchClass];
+    }
 
-  const clock = bpmClock();
-  let fN = 0;
+    const pattern = effect.notes.map(note => ({ note: note === "---" ? "---" : noteToMidi(note) }));
 
-  function frame(f) {
-    const positionInPattern = f % notes.length;
-    synths[0].play(notes[positionInPattern]);
-    synths[1].play(notes[positionInPattern]);
-    synths[2].play(notes[positionInPattern]);
-  }
-
-  clock.set(bpm, frame);
-
-  const duration = (60000 / bpm) * notes.length;
-  setTimeout(() => {
-    clock.stop();
-    synths.forEach((synth) => synth.stop());
-    ctx.close();
-  }, duration);
+    function frame(f) {
+		const positionInPattern = f % pattern.length;
+		if (f === pattern.length) {
+			synths.forEach(synth => synth.stop());
+			setTimeout(() => {
+				ctx.close();
+				clock.stop();
+			}, 60 / effect.bpm * 1000);
+			return;
+		}
+        synths.forEach((synth, i) => {
+            synth.play(pattern[positionInPattern]);
+        });
+    }
+    clock.set(effect.bpm, frame);
 }
 
-const exampleEffect = {
-  bpm: 120,
-  notes: ['C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6', 'rest']
-};
+
+
 
 // start of save/load
 function hex(v) {
@@ -1099,12 +1105,31 @@ function loadSettings() {
   updateSliderValues();
 }
 
+const soundEffects = {
+    victory: {
+        bpm: 120, // 60 seconds per minute / 0.1s duration per note = 600 BPM
+        notes: ["C4", "E4", "G4", "B4", "D5", "C5"]
+    },
+    levelUp: {
+        bpm: 60, // 60 seconds per minute / 0.2s duration per note = 300 BPM
+        notes: ["G3", "D#4", "G4", "C5", "D#5", "G5"]
+    },
+    nextFloor: {
+        bpm: 40, // 60 seconds per minute / 0.3s duration per note = 200 BPM
+        notes: ["A2", "E3", "A3", "E3"]
+    },
+    playerDeath: {
+        bpm: 80, // 60 seconds per minute / 0.15s duration per note = 400 BPM
+        notes: ["C2", "G2", "C3", "G3", "C4", "C3", "G2", "C2"]
+    }
+};
+
 document.addEventListener("DOMContentLoaded", () => {
 loadSettings();
 
 
 document.getElementById("generateBtn").addEventListener("click", () => {
-    trackControl = genTrack();
+	trackControl = genTrack();
 	trackControl.changeVolume(settings.trackVolume);
 });
 document.getElementById("resetBtn").addEventListener("click", () => {
