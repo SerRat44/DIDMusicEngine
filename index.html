@@ -19,7 +19,10 @@ button {
     margin-bottom: 1rem;
 	margin-left: 4px;
 	margin-right: 4px;
+	white-space: nowrap;
 }
+button:not([disabled]):hover { background-color: #ddd; cursor: pointer; }
+button:disabled { cursor: not-allowed; }
 #trackCodeWrapper {
   margin: 4px;
   margin-bottom: 1rem;
