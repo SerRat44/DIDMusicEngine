@@ -17,6 +17,8 @@ body {
 }
 button {
     margin-bottom: 1rem;
+	margin-left: 4px;
+	margin-right: 4px;
 }
 #trackCodeWrapper {
   margin: 4px;
@@ -95,6 +97,11 @@ button {
   font-size: 1.2em;
   margin: 4px;
 }
+.buttonContainer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 </style>
 </head>
 <body>
@@ -106,6 +113,7 @@ button {
     <button id="generateBtn">Generate Track</button>
     <button id="resetBtn" disabled>Reset</button>
   </div>
+  <!-- <div class="buttonContainer" id="effectContainer"></div> -->
   <div id="trackCodeWrapper">
     <div>Track Code</div>
     <div id="trackCode" onclick="copyTrackCode()"></div>
@@ -122,16 +130,27 @@ button {
     <input type="range" id="longSlider" min="0" max="127" value="0" step="1" style="width: 60%;">
 	-->
   </div>
+  <!--
   <div id="volumeControl">
     <div>
-      <label for="trackVolume">Volume:</label>
+	  <label for="effectVolume">Effect Volume:</label>
+      <span id="effectVolumeValue"></span>
+    </div>
+    <input type="range" id="effectVolume" min="0" max="100" value="50">
+  </div>
+   -->
+  <div id="volumeControl">
+    <div>
+      <label for="trackVolume">Track Volume:</label>
       <span id="trackVolumeValue"></span>
     </div>
     <input type="range" id="trackVolume" min="0" max="100" value="50">
   </div>
+
 </div>
 
 <script>
+
 
 // seed functions
 function sfc32(a, b, c, d) {
@@ -715,7 +734,7 @@ function playEffect(effect) {
     const clock = bpmClock();
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const au = Audio(ctx);
-    au.setVolume(1);
+    au.setVolume(settings.effectVolume);
 
     const synths = [
         au.SquareSynth(),
@@ -746,14 +765,13 @@ function playEffect(effect) {
 			}, 60 / effect.bpm * 1000);
 			return;
 		}
+		au.setVolume(settings.effectVolume);
         synths.forEach((synth, i) => {
             synth.play(pattern[positionInPattern]);
         });
     }
     clock.set(effect.bpm, frame);
 }
-
-
 
 
 // start of save/load
@@ -992,6 +1010,7 @@ function Audio(ctx) {
 }
 //end of audio
 
+
 //start of display
 function display () {
 	function getNoteName(noteValue) {
@@ -1064,17 +1083,10 @@ function display () {
 }
 //end of display
 
-async function copyTrackCode() {
-  const trackCodeElement = document.getElementById("trackCode");
-  try {
-    await navigator.clipboard.writeText(trackCodeElement.textContent);
-  } catch (err) {
-    console.error('Failed to copy track code: ', err);
-  }
-}
-
+//start of settings
 let settings = {
-    trackVolume: 0.5
+    trackVolume: 0.5,
+	effectVolume: 0.5
 };
 
 function updateVolume(volumeType, volume) {
@@ -1090,10 +1102,12 @@ function saveSettings() {
 
 function setSliderPositions() {
   trackVolume.value = settings.trackVolume * 100;
+  //effectVolume.value = settings.effectVolume * 100;
 }
 
 function updateSliderValues() {
   trackVolumeValue.textContent = `${trackVolume.value}%`;
+  //effectVolumeValue.textContent = `${effectVolume.value}%`;
 }
 
 function loadSettings() {
@@ -1104,6 +1118,34 @@ function loadSettings() {
   setSliderPositions();
   updateSliderValues();
 }
+//end of settings
+
+async function copyTrackCode() {
+  const trackCodeElement = document.getElementById("trackCode");
+  try {
+    await navigator.clipboard.writeText(trackCodeElement.textContent);
+  } catch (err) {
+    console.error('Failed to copy track code: ', err);
+  }
+}
+
+/*
+function createEffectButtons() {
+  const effectContainer = document.getElementById("effectContainer");
+
+  let effectIndex = 1;
+  for (const effect in soundEffects) {
+    const button = document.createElement("button");
+    //button.classList.add("button");
+    button.textContent = `${effectIndex}. ${effect}`;
+    button.addEventListener("click", () => {
+      playEffect(soundEffects[effect]);
+    });
+    effectContainer.appendChild(button);
+    effectIndex++;
+  }
+}
+*/
 
 const soundEffects = {
     victory: {
@@ -1126,7 +1168,7 @@ const soundEffects = {
 
 document.addEventListener("DOMContentLoaded", () => {
 loadSettings();
-
+//createEffectButtons();
 
 document.getElementById("generateBtn").addEventListener("click", () => {
 	trackControl = genTrack();
@@ -1138,13 +1180,16 @@ document.getElementById("resetBtn").addEventListener("click", () => {
     document.getElementById("generateBtn").disabled = false;
 });
 trackVolume.addEventListener("input", (event) => {
+	updateVolume("trackVolume", event);
 	if(trackControl) {
 		trackControl.changeVolume(settings.trackVolume);
-	}
-	updateVolume("trackVolume", event);
+	}	
 });
- 
-
+/*
+effectVolume.addEventListener("input", (event) => {
+    updateVolume("effectVolume", event);
+});
+*/
  
 });
 </script>
