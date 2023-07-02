@@ -1,0 +1,86 @@
+body {
+     font-family: monospace;
+     display: flex;
+     flex-direction: column;
+     margin: 4px;
+     background-color: #f2f2f2;
+     text-align: center;
+     padding-bottom: 80px;
+}
+ button {
+     margin-bottom: 1rem;
+     white-space: nowrap;
+}
+ button:not([disabled]):hover {
+     background-color: #ddd;
+     cursor: pointer;
+}
+ button:disabled {
+     cursor: not-allowed;
+}
+ #trackCodeWrapper {
+     margin: 4px;
+     margin-bottom: 1rem;
+     font-weight: bold;
+     font-size: 1.4em;
+}
+ #trackCode {
+     display: inline-block;
+     cursor: pointer;
+     color: #ff00ff;
+     background-color: #f8f9fa;
+     padding: 4px;
+     border: 2px solid #ced4da;
+     border-radius: 4px;
+}
+ #trackDisplay {
+     display: flex;
+     margin: 4px;
+     align-items: start;
+     flex-wrap: wrap;
+     justify-content: center;
+}
+ .songColumn {
+     border: 1px solid lightgrey;
+     box-sizing: border-box;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     margin: 6px;
+     background-color: lightgrey;
+     padding: 10px;
+}
+ .output-label {
+     font-weight: bold;
+     text-align: center;
+     margin-bottom: 6px;
+     font-size: 1.1em;
+}
+ .highlight {
+     background-color: #ff00ff;
+}
+ .note {
+     width: 100%;
+     padding: 2px;
+     box-sizing: border-box;
+     text-align: center;
+}
+ #bottomPanel {
+     position: fixed;
+     bottom: 0;
+     left: 0;
+     right: 0;
+     height: 60px;
+     background-color: #f2f2f2;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     padding: 0 20px;
+     box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.2);
+}
+ #volumeControl {
+     font-size: 1.15em;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+}
